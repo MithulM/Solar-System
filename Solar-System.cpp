@@ -1,6 +1,6 @@
 #define OLC_PGE_APPLICATION
 #include <iostream>
-#include "C:\Users\mithu\Downloads\Mithul\Coding\C++\olcPixelGameEngine.h"
+#include "olcPixelGameEngine.h"
 #include <ctime>
 constexpr auto SCALE = 1;
 constexpr auto PI = 3.141592653592653;
@@ -42,7 +42,7 @@ private:
 public:
 	BallPhysics(int num) : numBalls(num)
 	{
-		sAppName = "Testing Graphics";
+		sAppName = "Solar System";
 	}
 
 	bool OnUserCreate() override
@@ -76,9 +76,35 @@ public:
 			ball.pos.first += ball.vel.first * fElapsedTime;
 			ball.pos.second += ball.vel.second * fElapsedTime;
 
+			if (bounce)
+			{
+				if ((ball.pos.first + ball.radius) > ScreenWidth())
+					ball.pos.first = (ScreenWidth() - ball.radius);
+				if ((ball.pos.first - ball.radius) < 0)
+					ball.pos.first = ball.radius;
+
+				if ((ball.pos.second + ball.radius) > ScreenHeight())
+					ball.pos.second = (ScreenHeight() - ball.radius);
+				if ((ball.pos.second - ball.radius) < 0)
+					ball.pos.second = ball.radius;
+
+				if (ball.pos.first == (ScreenWidth() - ball.radius) || ball.pos.first == ball.radius)
+					ball.vel.first = -ball.vel.first;
+				if (ball.pos.second == (ScreenHeight() - ball.radius) || ball.pos.second == ball.radius)
+					ball.vel.second = -ball.vel.second;
+			}
+			else
+			{
+				ball.pos.first = std::fmod(std::fmod(ball.pos.first, ScreenWidth()) + ScreenWidth(), ScreenWidth());
+				ball.pos.second = std::fmod(std::fmod(ball.pos.second, ScreenHeight()) + ScreenHeight(), ScreenHeight());
+			}
+
 			FillCircle(olc::vi2d((int32_t)ball.pos.first, (int32_t)ball.pos.second), (int32_t)ball.radius, olc::Pixel(ball.r, ball.g, ball.b));
 			DrawCircle(olc::vi2d((int32_t)ball.pos.first, (int32_t)ball.pos.second), (int32_t)ball.radius, olc::Pixel(255 - ball.r, 255 - ball.g, 255 - ball.b));
 		}
+
+		if (GetMouse(2).bPressed)
+			bounce = !bounce;
 
 		if (GetMouse(0).bPressed)
 			balls.emplace_back(GetMouseX(), GetMouseY(), ran(-1000, 1000), ran(-1000, 1000), ran(5, 50), ran(.01, 5), rand() % 255, rand() % 255, rand() % 255);
