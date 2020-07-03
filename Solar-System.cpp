@@ -17,6 +17,7 @@ public:
 	std::pair<double, double> pos;
 	std::pair<double, double> vel;
 	double radius;
+	std::vector<std::pair<int, int>> visited;
 	int r;
 	int g;
 	int b;
@@ -96,11 +97,13 @@ public:
 			planet.pos.first += planet.vel.first * fElapsedTime;
 			planet.pos.second += planet.vel.second * fElapsedTime;
 
+			planet.visited.emplace_back(planet.pos);
 			
-
 			FillCircle(olc::vi2d((int32_t)planet.pos.first, (int32_t)planet.pos.second), (int32_t)planet.radius, olc::Pixel(planet.r, planet.g, planet.b));
 			DrawCircle(olc::vi2d((int32_t)planet.pos.first, (int32_t)planet.pos.second), (int32_t)planet.radius, olc::Pixel(255 - planet.r, 255 - planet.g, 255 - planet.b));
 			
+			for (unsigned int i = 0; i < planet.visited.size(); i++)
+				Draw(olc::vi2d(planet.visited[i].first, planet.visited[i].second), olc::Pixel(planet.r, planet.g, planet.b));
 
 		}
 
