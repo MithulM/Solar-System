@@ -42,7 +42,7 @@ private:
 public:
 	BallPhysics(int num) : numBalls(num)
 	{
-		sAppName = "Solar System";
+		sAppName = "Ball Physics";
 	}
 
 	bool OnUserCreate() override
@@ -54,12 +54,25 @@ public:
 
 		bounce = true;
 
-		/*
 		for (int i = 0; i < numBalls; i++)
 			balls.emplace_back(rand() % ScreenWidth(), rand() % ScreenHeight(), 0, 0, ran(5, 50), ran(1, 5), rand() % 255, rand() % 255, rand() % 255);
-		*/
 
 		return true;
+	}
+
+	void DrawArrow(double x1, double y1, double x2, double y2)
+	{
+		double theta = atan2(y2 - y1, x2 - x1);
+
+		double Xside1 = x2 - 10 * sin(3 * PI / 4 - theta);
+		double Yside1 = y2 - 10 * cos(3 * PI / 4 - theta);
+
+		double Xside2 = x2 - 10 * sin(PI / 4 - theta);
+		double Yside2 = y2 - 10 * cos(PI / 4 - theta);
+
+		DrawLine(olc::vi2d({ (int32_t)x1, (int32_t)y1}), olc::vi2d({ (int32_t)x2, (int32_t)y2 }));
+		DrawLine(olc::vi2d({ ((int32_t)x2), (int32_t)y2}), olc::vi2d({ (int32_t)Xside1, (int32_t)Yside1 }));
+		DrawLine(olc::vi2d({ ((int32_t)x2), (int32_t)y2}), olc::vi2d({ (int32_t)Xside2, (int32_t)Yside2 }));
 	}
 
 	bool OnUserUpdate(float fElapsedTime) override
@@ -75,7 +88,6 @@ public:
 
 			ball.pos.first += ball.vel.first * fElapsedTime;
 			ball.pos.second += ball.vel.second * fElapsedTime;
-
 			if (bounce)
 			{
 				if ((ball.pos.first + ball.radius) > ScreenWidth())
@@ -85,7 +97,7 @@ public:
 
 				if ((ball.pos.second + ball.radius) > ScreenHeight())
 					ball.pos.second = (ScreenHeight() - ball.radius);
-				if ((ball.pos.second - ball.radius) < 0)
+				if ((ball.pos.second - ball.radius)  < 0)
 					ball.pos.second = ball.radius;
 
 				if (ball.pos.first == (ScreenWidth() - ball.radius) || ball.pos.first == ball.radius)
@@ -101,14 +113,22 @@ public:
 
 			FillCircle(olc::vi2d((int32_t)ball.pos.first, (int32_t)ball.pos.second), (int32_t)ball.radius, olc::Pixel(ball.r, ball.g, ball.b));
 			DrawCircle(olc::vi2d((int32_t)ball.pos.first, (int32_t)ball.pos.second), (int32_t)ball.radius, olc::Pixel(255 - ball.r, 255 - ball.g, 255 - ball.b));
+
+		}
+
+		if (GetMouse(0).bHeld)
+		{
+			gravityX = GetMouseX();
+			gravityY = GetMouseY();
 		}
 
 		if (GetMouse(2).bPressed)
 			bounce = !bounce;
 
-		if (GetMouse(0).bPressed)
-			balls.emplace_back(GetMouseX(), GetMouseY(), ran(-1000, 1000), ran(-1000, 1000), ran(5, 50), ran(.01, 5), rand() % 255, rand() % 255, rand() % 255);
+		if (GetMouse(1).bPressed)
+			balls.emplace_back(GetMouseX(), GetMouseY(), 0, 0, ran(5, 50), ran(.01, 5), rand() % 255, rand() % 255, rand() % 255);
 
+		DrawArrow(midX, midY, gravityX, gravityY);
 		return true;
 	}
 };
