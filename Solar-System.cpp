@@ -11,51 +11,48 @@ double ran(double fMin, double fMax)
 	return fMin + (double)rand() / RAND_MAX * (fMax - fMin);
 }
 
-class Ball
+class Planet
 {
 public:
 	std::pair<double, double> pos;
 	std::pair<double, double> vel;
 	double radius;
-	double coFric;
+	std::vector<std::pair<int, int>> visited;
 	int r;
 	int g;
 	int b;
 
-	Ball(double x = 0, double y = 0, double vx = 0, double vy = 0, double radius = 1, double friction = 0, int r = 0, int g = 0, int b = 0)
-		: pos({ x, y }), vel({vx, vy}), radius(radius), coFric(friction), r(r), g(g), b(b)
+	Planet(double x = 0, double y = 0, double vx = 0, double vy = 0, double radius = 1, int r = 0, int g = 0, int b = 0)
+		: pos({ x, y }), vel({ vx, vy }), radius(radius), r(r), g(g), b(b)
 	{
 	}
 };
 
-class BallPhysics : public olc::PixelGameEngine
+class PlanetPhysics : public olc::PixelGameEngine
 {
 private:
-	std::vector<Ball> balls;
+	std::vector<Planet> planets;
+	Planet sun;
+	double coFric;
+	int32_t startX;
+	int32_t startY;
 	int midX;
 	int midY;
-	double gravityX;
-	double gravityY;
-	bool bounce;
-	int numBalls;
 
 public:
-	BallPhysics(int num) : numBalls(num)
+	PlanetPhysics()
 	{
-		sAppName = "Ball Physics";
+		sAppName = "Testing Graphics";
 	}
 
 	bool OnUserCreate() override
 	{
-		balls.reserve(150);
+		planets.reserve(150);
 
-		midX = gravityX = ScreenWidth() / 2;
-		midY = gravityY = ScreenHeight() / 2;
+		sun = { ScreenWidth() / 2.0, ScreenHeight() / 2.0, 0, 0, 10, 255, 255, 0 };
 
-		bounce = true;
-
-		for (int i = 0; i < numBalls; i++)
-			balls.emplace_back(rand() % ScreenWidth(), rand() % ScreenHeight(), 0, 0, ran(5, 50), ran(1, 5), rand() % 255, rand() % 255, rand() % 255);
+		midX = startX = ScreenWidth() / 2;
+		midY = startY = ScreenHeight() / 2;
 
 		return true;
 	}
@@ -70,72 +67,84 @@ public:
 		double Xside2 = x2 - 10 * sin(PI / 4 - theta);
 		double Yside2 = y2 - 10 * cos(PI / 4 - theta);
 
-		DrawLine(olc::vi2d({ (int32_t)x1, (int32_t)y1}), olc::vi2d({ (int32_t)x2, (int32_t)y2 }));
-		DrawLine(olc::vi2d({ ((int32_t)x2), (int32_t)y2}), olc::vi2d({ (int32_t)Xside1, (int32_t)Yside1 }));
-		DrawLine(olc::vi2d({ ((int32_t)x2), (int32_t)y2}), olc::vi2d({ (int32_t)Xside2, (int32_t)Yside2 }));
+		DrawLine(olc::vi2d({ (int32_t)x1, (int32_t)y1 }), olc::vi2d({ (int32_t)x2, (int32_t)y2 }));
+		DrawLine(olc::vi2d({ ((int32_t)x2), (int32_t)y2 }), olc::vi2d({ (int32_t)Xside1, (int32_t)Yside1 }));
+		DrawLine(olc::vi2d({ ((int32_t)x2), (int32_t)y2 }), olc::vi2d({ (int32_t)Xside2, (int32_t)Yside2 }));
 	}
 
 	bool OnUserUpdate(float fElapsedTime) override
 	{
-		
+
 		Clear(olc::BLACK);
 
-		for (Ball& ball : balls)
+		FillCircle(olc::vi2d((int32_t)sun.pos.first, (int32_t)sun.pos.second), (int32_t)sun.radius, olc::Pixel(sun.r, sun.g, sun.b));
+
+		int32_t currX = GetMouseX();
+		int32_t currY = GetMouseY();
+
+		for (Planet& planet : planets)
 		{
+			double vectorX = sun.pos.first - planet.pos.first;
+			double vectorY = sun.pos.second - planet.pos.second;
+			double distance = sqrt(vectorX * vectorX + vectorY * vectorY);
+			double gravity = sun.radius * planet.radius / distance / distance;
 
-			ball.vel.first += ((gravityX - midX) - ball.coFric * ball.vel.first) * fElapsedTime;
-			ball.vel.second += ((gravityY - midY) - ball.coFric * ball.vel.second) * fElapsedTime;
+			std::pair<double, double> accel = { vectorX / distance * gravity, vectorY / distance * gravity };
 
-			ball.pos.first += ball.vel.first * fElapsedTime;
-			ball.pos.second += ball.vel.second * fElapsedTime;
-			if (bounce)
-			{
-				if ((ball.pos.first + ball.radius) > ScreenWidth())
-					ball.pos.first = (ScreenWidth() - ball.radius);
-				if ((ball.pos.first - ball.radius) < 0)
-					ball.pos.first = ball.radius;
+			planet.vel.first += accel.first * fElapsedTime * 100000;
+			planet.vel.second += accel.second * fElapsedTime * 100000;
 
-				if ((ball.pos.second + ball.radius) > ScreenHeight())
-					ball.pos.second = (ScreenHeight() - ball.radius);
-				if ((ball.pos.second - ball.radius)  < 0)
-					ball.pos.second = ball.radius;
+			planet.pos.first += planet.vel.first * fElapsedTime;
+			planet.pos.second += planet.vel.second * fElapsedTime;
 
-				if (ball.pos.first == (ScreenWidth() - ball.radius) || ball.pos.first == ball.radius)
-					ball.vel.first = -ball.vel.first;
-				if (ball.pos.second == (ScreenHeight() - ball.radius) || ball.pos.second == ball.radius)
-					ball.vel.second = -ball.vel.second;
-			}
-			else
-			{
-				ball.pos.first = std::fmod(std::fmod(ball.pos.first, ScreenWidth()) + ScreenWidth(), ScreenWidth());
-				ball.pos.second = std::fmod(std::fmod(ball.pos.second, ScreenHeight()) + ScreenHeight(), ScreenHeight());
-			}
-
-			FillCircle(olc::vi2d((int32_t)ball.pos.first, (int32_t)ball.pos.second), (int32_t)ball.radius, olc::Pixel(ball.r, ball.g, ball.b));
-			DrawCircle(olc::vi2d((int32_t)ball.pos.first, (int32_t)ball.pos.second), (int32_t)ball.radius, olc::Pixel(255 - ball.r, 255 - ball.g, 255 - ball.b));
+			planet.visited.emplace_back(planet.pos);
+			
+			FillCircle(olc::vi2d((int32_t)planet.pos.first, (int32_t)planet.pos.second), (int32_t)planet.radius, olc::Pixel(planet.r, planet.g, planet.b));
+			DrawCircle(olc::vi2d((int32_t)planet.pos.first, (int32_t)planet.pos.second), (int32_t)planet.radius, olc::Pixel(255 - planet.r, 255 - planet.g, 255 - planet.b));
+			
+			for (unsigned int i = 0; i < planet.visited.size(); i++)
+				Draw(olc::vi2d(planet.visited[i].first, planet.visited[i].second), olc::Pixel(planet.r, planet.g, planet.b));
 
 		}
 
-		if (GetMouse(0).bHeld)
+		if (GetMouse(0).bPressed || GetMouse(1).bPressed || GetMouse(2).bPressed)
 		{
-			gravityX = GetMouseX();
-			gravityY = GetMouseY();
+			startX = currX;
+			startY = currY;
 		}
 
-		if (GetMouse(2).bPressed)
-			bounce = !bounce;
+		if (GetMouse(0).bHeld || GetMouse(2).bHeld)
+			DrawArrow(startX, startY, currX, currY);
+
+		if (GetMouse(0).bReleased)
+			planets.emplace_back(startX, startY, currX - startX, currY - startY, ran(1, 50), rand() % 255, rand() % 255, rand() % 255);
+
+		if (GetMouse(2).bReleased)
+		{
+			double vectorX = sun.pos.first - startX;
+			double vectorY = sun.pos.second - startY;
+			double distance = sqrt(vectorX * vectorX + vectorY * vectorY);
+			double radius = ran(5, 50);
+			double s = log(sqrt(radius / distance * ((currX - startX) * (currX - startX) + (currY - startY) * (currY - startY)))) * 40;
+			planets.emplace_back(startX, startY, vectorY / distance * s, -vectorX / distance * s, radius, rand() % 255, rand() % 255, rand() % 255);
+		}
 
 		if (GetMouse(1).bPressed)
-			balls.emplace_back(GetMouseX(), GetMouseY(), 0, 0, ran(5, 50), ran(.01, 5), rand() % 255, rand() % 255, rand() % 255);
+		{
+			double vectorX = sun.pos.first - startX;
+			double vectorY = sun.pos.second - startY;
+			double distance = sqrt(vectorX * vectorX + vectorY * vectorY);
+			double radius = ran(5, 50);
+			double s = sqrt(radius / distance) * 1000;
+			planets.emplace_back(startX, startY, vectorY / distance * s, -vectorX / distance * s, radius, rand() % 255, rand() % 255, rand() % 255);
+		}
 
-		DrawArrow(midX, midY, gravityX, gravityY);
 		return true;
 	}
 };
-
 int main()
 {
-	BallPhysics demo = BallPhysics(10);
+	PlanetPhysics demo = PlanetPhysics();
 	if (demo.Construct(1920, 1080, 1, 1, true, false))	demo.Start();
 	return 0;
 }
